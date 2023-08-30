@@ -89,33 +89,21 @@ class DataSourceV2StrategySuite extends PlanTest with SharedSparkSession {
     .foreach { case ((attrInt, intColName), (attrStr, strColName)) =>
       testTranslateFilter(EqualTo(attrInt, 1),
         Some(new Predicate("=", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
-      testTranslateFilter(EqualTo(1, attrInt),
-        Some(new Predicate("=", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
 
       testTranslateFilter(EqualNullSafe(attrInt, 1),
-        Some(new Predicate("<=>", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
-      testTranslateFilter(EqualNullSafe(1, attrInt),
         Some(new Predicate("<=>", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
 
       testTranslateFilter(GreaterThan(attrInt, 1),
         Some(new Predicate(">", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
-      testTranslateFilter(GreaterThan(1, attrInt),
-        Some(new Predicate("<", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
 
       testTranslateFilter(LessThan(attrInt, 1),
         Some(new Predicate("<", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
-      testTranslateFilter(LessThan(1, attrInt),
-        Some(new Predicate(">", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
 
       testTranslateFilter(GreaterThanOrEqual(attrInt, 1),
         Some(new Predicate(">=", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
-      testTranslateFilter(GreaterThanOrEqual(1, attrInt),
-        Some(new Predicate("<=", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
 
       testTranslateFilter(LessThanOrEqual(attrInt, 1),
         Some(new Predicate("<=", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
-      testTranslateFilter(LessThanOrEqual(1, attrInt),
-        Some(new Predicate(">=", Array(FieldReference(intColName), LiteralValue(1, IntegerType)))))
 
       testTranslateFilter(IsNull(attrInt),
         Some(new Predicate("IS_NULL", Array(FieldReference(intColName)))))
@@ -172,8 +160,8 @@ class DataSourceV2StrategySuite extends PlanTest with SharedSparkSession {
       // ABS(cint) - 2 <= 1
       testTranslateFilter(LessThanOrEqual(
         // Expressions are not supported
-        // Functions such as 'Abs' are not supported
-        Subtract(Abs(attrInt), 2), 1), None)
+        // Functions such as 'Abs' are not pushed down with ANSI mode off
+        Subtract(Abs(attrInt, failOnError = false), 2), 1), None)
 
       // (cin1 > 1 AND cint < 10) OR (cint > 50 AND cint > 100)
       testTranslateFilter(Or(
@@ -199,8 +187,8 @@ class DataSourceV2StrategySuite extends PlanTest with SharedSparkSession {
       testTranslateFilter(Or(
         And(
           GreaterThan(attrInt, 1),
-          // Functions such as 'Abs' are not supported
-          LessThan(Abs(attrInt), 10)
+          // Functions such as 'Abs' are not pushed down with ANSI mode off
+          LessThan(Abs(attrInt, failOnError = false), 10)
         ),
         And(
           GreaterThan(attrInt, 50),
@@ -210,8 +198,8 @@ class DataSourceV2StrategySuite extends PlanTest with SharedSparkSession {
       testTranslateFilter(Not(And(
         Or(
           LessThanOrEqual(attrInt, 1),
-          // Functions such as 'Abs' are not supported
-          GreaterThanOrEqual(Abs(attrInt), 10)
+          // Functions such as 'Abs' are not pushed down with ANSI mode off
+          GreaterThanOrEqual(Abs(attrInt, failOnError = false), 10)
         ),
         Or(
           LessThanOrEqual(attrInt, 50),
@@ -240,8 +228,8 @@ class DataSourceV2StrategySuite extends PlanTest with SharedSparkSession {
       testTranslateFilter(Or(
         Or(
           EqualTo(attrInt, 1),
-          // Functions such as 'Abs' are not supported
-          EqualTo(Abs(attrInt), 10)
+          // Functions such as 'Abs' are not pushed down with ANSI mode off
+          EqualTo(Abs(attrInt, failOnError = false), 10)
         ),
         Or(
           GreaterThan(attrInt, 0),
@@ -276,8 +264,8 @@ class DataSourceV2StrategySuite extends PlanTest with SharedSparkSession {
           LessThan(attrInt, 10)
         ),
         And(
-          // Functions such as 'Abs' are not supported
-          EqualTo(Abs(attrInt), 6),
+          // Functions such as 'Abs' are not pushed down with ANSI mode off
+          EqualTo(Abs(attrInt, failOnError = false), 6),
           IsNotNull(attrInt))), None)
 
       // (cint > 1 OR cint < 10) AND (cint = 6 OR cint IS NOT NULL)
@@ -306,14 +294,14 @@ class DataSourceV2StrategySuite extends PlanTest with SharedSparkSession {
           LessThan(attrInt, 10)
         ),
         Or(
-          // Functions such as 'Abs' are not supported
-          EqualTo(Abs(attrInt), 6),
+          // Functions such as 'Abs' are not pushed down with ANSI mode off
+          EqualTo(Abs(attrInt, failOnError = false), 6),
           IsNotNull(attrInt))), None)
     }
   }
 
   test("SPARK-36644: Push down boolean column filter") {
-    testTranslateFilter(Symbol("col").boolean,
+    testTranslateFilter($"col".boolean,
       Some(new Predicate("=", Array(FieldReference("col"), LiteralValue(true, BooleanType)))))
   }
 
